@@ -127,6 +127,20 @@
                 </div>
             </div>
 
+            <!-- Header Actions (Backup / Restore) -->
+            <div class="flex justify-end gap-3 mb-6">
+                <button onclick="backupDatabase()"
+                    class="bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-cloud-download-alt"></i> Backup Data
+                </button>
+                <button onclick="document.getElementById('importRestoreFile').click()"
+                    class="bg-white hover:bg-slate-50 text-navy-800 border border-navy-200 text-xs font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-cloud-upload-alt"></i> Restore Data
+                </button>
+                <input type="file" id="importRestoreFile" accept=".json" class="hidden"
+                    onchange="restoreDatabase(event)">
+            </div>
+
             <!-- Dashboard Summary Charts menggunakan PHP Variables -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div
@@ -265,6 +279,12 @@
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal</label>
+                                <input type="date" name="tDate" id="tDate" required
+                                    class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-slate-600 mb-1">Nominal (Rp)</label>
                                 <div class="relative">
                                     <span class="absolute left-4 top-2 text-slate-500 font-medium">Rp</span>
@@ -393,6 +413,65 @@
             </div>
         </div> <!-- End of Debt View -->
 
+        <!-- VIEW: REKAPAN BULANAN -->
+        <div id="view-recap" class="hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Rekapan Bulanan</h2>
+            </div>
+
+            <!-- Selector Bulan & Tahun -->
+            <div
+                class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 mb-6">
+                <div class="w-full sm:w-1/2">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Bulan</label>
+                    <select id="recapMonth" onchange="renderMonthlyRecap()"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="0">Januari</option>
+                        <option value="1">Februari</option>
+                        <option value="2">Maret</option>
+                        <option value="3">April</option>
+                        <option value="4">Mei</option>
+                        <option value="5">Juni</option>
+                        <option value="6">Juli</option>
+                        <option value="7">Agustus</option>
+                        <option value="8">September</option>
+                        <option value="9">Oktober</option>
+                        <option value="10">November</option>
+                        <option value="11">Desember</option>
+                    </select>
+                </div>
+                <div class="w-full sm:w-1/2">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Tahun</label>
+                    <input type="number" id="recapYear" onchange="renderMonthlyRecap()" placeholder="YYYY" required
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <!-- Rekapan Summary (Pemasukan, Pengeluaran, Saldo) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card bg-emerald-50 rounded-2xl p-6 shadow-sm border-l-4 border-emerald-500">
+                    <h3 class="text-slate-500 text-sm font-medium mb-1">Pemasukan Bulan Ini</h3>
+                    <p class="text-2xl font-bold text-emerald-600" id="recapIncome">Rp 0</p>
+                </div>
+                <div class="glass-card bg-rose-50 rounded-2xl p-6 shadow-sm border-l-4 border-rose-500">
+                    <h3 class="text-slate-500 text-sm font-medium mb-1">Pengeluaran Bulan Ini</h3>
+                    <p class="text-2xl font-bold text-rose-600" id="recapExpense">Rp 0</p>
+                </div>
+                <div class="glass-card bg-navy-50 rounded-2xl p-6 shadow-sm border-l-4 border-navy-500">
+                    <h3 class="text-slate-500 text-sm font-medium mb-1">Sisa Saldo Bersih</h3>
+                    <p class="text-2xl font-bold text-navy-800" id="recapBalance">Rp 0</p>
+                </div>
+            </div>
+
+            <!-- Transaction List untuk Rekapan -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[400px]">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Rincian Transaksi</h2>
+                <div id="recapList" class="flex flex-col gap-2 p-2">
+                    <!-- Recap List dirender oleh Javascript -->
+                </div>
+            </div>
+        </div> <!-- End of Recap View -->
+
     </main>
 
     <!-- Bottom Navigation Bar (Mobile / Sticky) -->
@@ -404,6 +483,12 @@
                 class="flex-1 flex flex-col items-center justify-center py-3 text-navy-800 font-semibold transition-colors duration-200">
                 <i class="fas fa-chart-pie text-xl mb-1"></i>
                 <span class="text-[10px] uppercase tracking-wider">Dashboard</span>
+            </button>
+
+            <button onclick="switchView('recap')" id="nav-recap"
+                class="flex-1 flex flex-col items-center justify-center py-3 text-slate-400 hover:text-navy-600 font-medium transition-colors duration-200">
+                <i class="fas fa-calendar-alt text-xl mb-1"></i>
+                <span class="text-[10px] uppercase tracking-wider">Rekapan</span>
             </button>
 
             <button onclick="switchView('debt')" id="nav-debt"
@@ -452,6 +537,68 @@
                     class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg shadow-md transition-all">
                     Simpan Limit
                 </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Transaksi -->
+    <div id="editModal"
+        class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-edit text-navy-700"></i>
+                    Edit Transaksi</h3>
+                <button onclick="document.getElementById('editModal').classList.add('hidden')"
+                    class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="editForm" class="p-6 flex flex-col gap-4">
+                <input type="hidden" id="editId">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nama Transaksi</label>
+                    <input type="text" name="eName" id="editName" required
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Tipe Transaksi</label>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="eType" id="editTypeExpense" value="expense" class="peer sr-only">
+                            <div
+                                class="w-full py-2 rounded-lg text-center border border-slate-200 bg-slate-50 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 font-medium transition-all">
+                                Pengeluaran</div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="eType" id="editTypeIncome" value="income" class="peer sr-only">
+                            <div
+                                class="w-full py-2 rounded-lg text-center border border-slate-200 bg-slate-50 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 font-medium transition-all">
+                                Pemasukan</div>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Kategori</label>
+                    <select name="eCategory" id="editCategory" required
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nominal (Rp)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-2 text-slate-500 font-medium">Rp</span>
+                        <input type="number" name="eAmount" id="editAmount" required min="1"
+                            class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal</label>
+                    <input type="date" name="eDate" id="editDate" required
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
+                <button type="submit"
+                    class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">Simpan
+                    Perubahan</button>
             </form>
         </div>
     </div>
@@ -566,6 +713,15 @@
             renderDebts();
             updateDebtNamesDatalist();
 
+            // Re-render Recap (Set Default Year to Current Year, Default Month to Current) if not yet set
+            const today = new Date();
+            const recapYearInput = document.getElementById('recapYear');
+            if (recapYearInput && !recapYearInput.value) {
+                recapYearInput.value = today.getFullYear();
+                document.getElementById('recapMonth').value = today.getMonth();
+            }
+            renderMonthlyRecap();
+
             // Run Notification Engine
             checkDueDates();
         }
@@ -585,6 +741,15 @@
 
                 const tomorrow = new Date(today);
                 tomorrow.setDate(tomorrow.getDate() + 1);
+
+                // Set default date picker to today
+                const tDateInput = document.getElementById('tDate');
+                if (tDateInput) {
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    tDateInput.value = `${yyyy}-${mm}-${dd}`;
+                }
 
                 debts.forEach(d => {
                     if (d.status !== 'Lunas') {
@@ -659,6 +824,23 @@
         }
         tTypeRadios.forEach(radio => radio.addEventListener('change', updateCategoryDropdown));
 
+        // Helper untuk mengisi dropdown kategori Edit Modal
+        function populateEditCategoryDropdown(type, selectedCategory = '') {
+            const editCat = document.getElementById('editCategory');
+            editCat.innerHTML = '';
+            categories[type].forEach(cat => {
+                const selected = cat === selectedCategory ? 'selected' : '';
+                editCat.innerHTML += `<option value="${cat}" ${selected}>${cat}</option>`;
+            });
+        }
+
+        const editTypeRadios = document.getElementsByName('eType');
+        editTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                populateEditCategoryDropdown(e.target.value);
+            });
+        });
+
         // Add Transaction (Intercept Form Submission)
         const transactionForm = document.getElementById('transactionForm');
         transactionForm.addEventListener('submit', async (e) => {
@@ -670,11 +852,19 @@
                 jenis: fd.get('tType'),
                 kategori: fd.get('tCategory'),
                 jumlah: parseFloat(fd.get('tAmount')),
-                tanggal: new Date().toISOString() // Simpan Full Date String
+                tanggal: fd.get('tDate') // Simpan format YYYY-MM-DD
             };
 
             await db.transaksi.add(newTransaction);
             transactionForm.reset();
+
+            // Set kembali tanggal ke hari ini
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('tDate').value = `${yyyy}-${mm}-${dd}`;
+
             loadData(); // Reload UI
         });
 
@@ -684,6 +874,148 @@
                 await db.transaksi.delete(id);
                 loadData(); // Reload UI
             }
+        }
+
+        async function openEditModal(id) {
+            const trx = await db.transaksi.get(id);
+            if (!trx) return;
+
+            document.getElementById('editId').value = trx.id;
+            document.getElementById('editName').value = trx.deskripsi;
+            document.getElementById('editAmount').value = trx.jumlah;
+
+            // Format YYYY-MM-DD for input type="date"
+            let trxDateStr = trx.tanggal;
+            if (trxDateStr.includes("T")) {
+                trxDateStr = trxDateStr.split('T')[0]; // Handle old ISO date formats gracefully
+            }
+            document.getElementById('editDate').value = trxDateStr;
+
+            if (trx.jenis === 'expense') {
+                document.getElementById('editTypeExpense').checked = true;
+            } else {
+                document.getElementById('editTypeIncome').checked = true;
+            }
+            populateEditCategoryDropdown(trx.jenis, trx.kategori);
+
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        const editForm = document.getElementById('editForm');
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editId').value);
+            const fd = new FormData(editForm);
+
+            const updatedTransaction = {
+                deskripsi: fd.get('eName'),
+                jenis: fd.get('eType'),
+                kategori: fd.get('eCategory'),
+                jumlah: parseFloat(fd.get('eAmount')),
+                tanggal: fd.get('eDate')
+            };
+
+            await db.transaksi.update(id, updatedTransaction);
+            document.getElementById('editModal').classList.add('hidden');
+            loadData(); // Reload UI
+        });
+
+        // ==============================
+        // FITUR BACKUP & RESTORE DATA
+        // ==============================
+        async function backupDatabase() {
+            try {
+                // Fetch all data from DB
+                const allTransaksi = await db.transaksi.toArray();
+                const allBudgets = await db.budgets.toArray();
+                const allDebts = await db.debts.toArray();
+
+                // Create JSON Backup Object
+                const backupData = {
+                    metadata: {
+                        version: 2,
+                        exported_at: new Date().toISOString(),
+                        app: "KeuanganKu"
+                    },
+                    data: {
+                        transaksi: allTransaksi,
+                        budgets: allBudgets,
+                        debts: allDebts
+                    }
+                };
+
+                // Convert to Blob and Trigger Download
+                const dataStr = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+
+                const dateSuffix = new Date().toISOString().split('T')[0];
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Backup_KeuanganKu_${dateSuffix}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                alert("Backup data berhasil diunduh! Simpan file ini baik-baik.");
+            } catch (err) {
+                alert("Terjadi kesalahan saat membuat backup: " + err.message);
+            }
+        }
+
+        async function restoreDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!confirm("PERINGATAN! Proses Restore akan menghapus semua data yang ada saat ini dan menggantinya dengan data dari file backup. Apakah Anda yakin ingin melanjutkan?")) {
+                event.target.value = ''; // Reset input
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const contents = e.target.result;
+                    const parsed = JSON.parse(contents);
+
+                    // Validasi file (Opsional tapi direkomendasikan)
+                    if (!parsed.metadata || parsed.metadata.app !== "KeuanganKu" || !parsed.data) {
+                        throw new Error("File backup tidak valid atau tidak dikenali.");
+                    }
+
+                    // Hapus semua isi database yang lama
+                    await db.transaksi.clear();
+                    await db.budgets.clear();
+                    await db.debts.clear();
+
+                    // Insert data restore (Bulk Addition)
+                    if (parsed.data.transaksi && parsed.data.transaksi.length > 0) {
+                        await db.transaksi.bulkAdd(parsed.data.transaksi);
+                    }
+                    if (parsed.data.budgets && parsed.data.budgets.length > 0) {
+                        await db.budgets.bulkAdd(parsed.data.budgets);
+                    }
+                    if (parsed.data.debts && parsed.data.debts.length > 0) {
+                        await db.debts.bulkAdd(parsed.data.debts);
+                    }
+
+                    alert("Data berhasil di-restore! Halaman akan dimuat ulang.");
+                    event.target.value = ''; // Reset input
+                    loadData(); // Re-render UI
+                } catch (err) {
+                    alert("Gagal melakukan restore: " + err.message);
+                    event.target.value = '';
+                }
+            };
+
+            reader.onerror = function () {
+                alert("Gagal membaca file backup.");
+                event.target.value = '';
+            };
+
+            reader.readAsText(file);
         }
 
         // Add / Update Budget
@@ -753,18 +1085,26 @@
         function switchView(viewId) {
             // Hide all views
             document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-recap').classList.add('hidden');
             document.getElementById('view-debt').classList.add('hidden');
 
             // Show targeted view
             document.getElementById('view-' + viewId).classList.remove('hidden');
 
             // Reset Nav styling
-            document.getElementById('nav-dashboard').className = "flex-1 flex flex-col items-center justify-center py-3 text-slate-400 hover:text-navy-600 font-medium transition-colors duration-200";
-            document.getElementById('nav-debt').className = "flex-1 flex flex-col items-center justify-center py-3 text-slate-400 hover:text-navy-600 font-medium transition-colors duration-200";
+            const inactiveClass = "flex-1 flex flex-col items-center justify-center py-3 text-slate-400 hover:text-navy-600 font-medium transition-colors duration-200";
+            document.getElementById('nav-dashboard').className = inactiveClass;
+            document.getElementById('nav-recap').className = inactiveClass;
+            document.getElementById('nav-debt').className = inactiveClass;
 
             // Set active Nav styling
             const activeClass = "flex-1 flex flex-col items-center justify-center py-3 text-navy-800 font-semibold transition-colors duration-200";
             document.getElementById('nav-' + viewId).className = activeClass;
+
+            // If strictly swapping to recap view, force re-render
+            if (viewId === 'recap') {
+                renderMonthlyRecap();
+            }
         }
 
         searchInput.addEventListener('input', renderList);
@@ -1033,7 +1373,7 @@
 
                 // Format t.tanggal YYYY-MM-DD ke format lokal
                 const dateObj = new Date(t.tanggal);
-                const formattedDate = dateObj.toLocaleDateString('id-ID'); // c/hari/bulan/tahun
+                const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); // c/hari/bulan/tahun
 
                 el.innerHTML = `
                     <div class="flex items-center gap-4">
@@ -1045,13 +1385,18 @@
                             <p class="text-xs text-slate-500 mt-0.5">${t.kategori} • ${formattedDate}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
+                <div class="flex items-center gap-4">
                         <span class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-700'}">
                             ${isIncome ? '+' : '-'}${formatIDR(t.jumlah)}
                         </span>
-                        <button onclick="deleteTransaction(${t.id})" class="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2 rounded-lg hover:bg-rose-50" title="Hapus Data">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <div class="flex opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="openEditModal(${t.id})" class="text-slate-300 hover:text-navy-500 p-2 rounded-lg hover:bg-slate-100" title="Edit Data">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteTransaction(${t.id})" class="text-slate-300 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50" title="Hapus Data">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
                 list.appendChild(el);
@@ -1074,6 +1419,65 @@
                 'Lainnya': isIncome ? 'fa-plus-circle' : 'fa-minus-circle'
             };
             return icons[category] || (isIncome ? 'fa-arrow-down' : 'fa-arrow-up');
+        }
+
+        // Render Monthly Recap 
+        function renderMonthlyRecap() {
+            const rMonth = parseInt(document.getElementById('recapMonth').value);
+            const rYear = parseInt(document.getElementById('recapYear').value);
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            // Filter Transaction List
+            const recapFiltered = transaksi.filter(t => {
+                const d = new Date(t.tanggal);
+                return d.getMonth() === rMonth && d.getFullYear() === rYear;
+            });
+
+            const listEl = document.getElementById('recapList');
+            listEl.innerHTML = '';
+
+            if (recapFiltered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-10 text-slate-400">
+                        <i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i>
+                        <p>Tidak ada transaksi terdaftar di bulan tersebut.</p>
+                    </div>`;
+            }
+
+            recapFiltered.forEach(t => {
+                const isIncome = t.jenis === 'income';
+                if (isIncome) totalIncome += t.jumlah;
+                else totalExpense += t.jumlah;
+
+                const dObj = new Date(t.tanggal);
+                const formatter = dObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                const el = document.createElement('div');
+                el.className = 'flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 mb-2 transition-all';
+                el.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                            <i class="fas ${getIcon(t.kategori, isIncome)}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-800 text-sm tracking-tight">${t.deskripsi}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">${t.kategori} • ${formatter}</p>
+                        </div>
+                    </div>
+                    <div class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-700'}">
+                        ${isIncome ? '+' : '-'}${formatIDR(t.jumlah)}
+                    </div>
+                `;
+                listEl.appendChild(el);
+            });
+
+            const totalBalance = totalIncome - totalExpense;
+
+            document.getElementById('recapIncome').innerText = formatIDR(totalIncome);
+            document.getElementById('recapExpense').innerText = formatIDR(totalExpense);
+            document.getElementById('recapBalance').innerText = formatIDR(totalBalance);
         }
 
         let expenseChartInstance = null;
@@ -1211,7 +1615,7 @@
             }
 
             const exportData = filtered.map(t => ({
-                'Tanggal': new Date(t.tanggal).toLocaleDateString('id-ID'),
+                'Tanggal': new Date(t.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                 'Nama Transaksi': t.deskripsi,
                 'Kategori': t.kategori,
                 'Tipe': t.jenis === 'income' ? 'Pemasukan' : 'Pengeluaran',
@@ -1284,7 +1688,7 @@
                 const types = t.jenis === 'income' ? 'Pemasukan' : 'Pengeluaran';
                 return [
                     index + 1,
-                    dateObj.toLocaleDateString('id-ID'),
+                    dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                     t.deskripsi,
                     t.kategori,
                     types,
