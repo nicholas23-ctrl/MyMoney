@@ -1,4 +1,4 @@
-const CACHE_NAME = 'keuanganku-v4-debt-tracking';
+const CACHE_NAME = 'keuanganku-v6-debt-catat';
 const urlsToCache = [
     './index.html',
     './manifest.json',

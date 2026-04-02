@@ -417,6 +417,16 @@
         <div id="view-recap" class="hidden">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Rekapan Bulanan</h2>
+                <div class="flex gap-2 w-full sm:w-auto overflow-x-auto hide-scroll pb-1 sm:pb-0">
+                    <button onclick="exportRecapPDF()" title="Cetak PDF"
+                        class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium p-2.5 rounded-xl transition-all border border-rose-200 shrink-0 flex items-center gap-1.5">
+                        <i class="fas fa-file-pdf"></i> <span class="text-xs font-bold">PDF</span>
+                    </button>
+                    <button onclick="exportRecapExcel()" title="Export Excel"
+                        class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-medium p-2.5 rounded-xl transition-all border border-emerald-200 shrink-0 flex items-center gap-1.5">
+                        <i class="fas fa-file-excel"></i> <span class="text-xs font-bold">Excel</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Selector Bulan & Tahun -->
@@ -661,6 +671,12 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal Tercatat</label>
+                    <input type="date" name="dCreatedDate" id="dCreatedDate" required
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 transition-all">
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-slate-600 mb-1">Tenggat Waktu / Janji Bayar</label>
                     <input type="date" name="dDueDate" required
                         class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 transition-all">
@@ -690,9 +706,21 @@
             debts: '++id, nama, keterangan, jenis, jumlah, tanggal_tenggat, status'
             // status: 'Belum Lunas' / 'Lunas'
         });
+        db.version(3).stores({
+            transaksi: '++id, deskripsi, jenis, kategori, jumlah, tanggal',
+            budgets: '++id, kategori, limit_amount',
+            debts: '++id, nama, keterangan, jenis, jumlah, tanggal_tenggat, tanggal_catat, status'
+        }).upgrade(tx => {
+            return tx.debts.toCollection().modify(debt => {
+                if (!debt.tanggal_catat) {
+                    debt.tanggal_catat = new Date().toISOString().split('T')[0];
+                }
+            });
+        });
 
         // Store App State
         let transaksi = [];
+        let currentMonthTransaksi = [];
         let budgets = [];
         let debts = [];
         let currentDebtFilter = 'Semua'; // 'Semua', 'Hutang', 'Piutang', 'Lunas', 'Belum Lunas'
@@ -700,6 +728,15 @@
         // Main Load Function
         async function loadData() {
             transaksi = await db.transaksi.reverse().toArray();
+
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            currentMonthTransaksi = transaksi.filter(t => {
+                const d = new Date(t.tanggal);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+
             budgets = await db.budgets.toArray();
             debts = await db.debts.reverse().toArray();
 
@@ -714,7 +751,6 @@
             updateDebtNamesDatalist();
 
             // Re-render Recap (Set Default Year to Current Year, Default Month to Current) if not yet set
-            const today = new Date();
             const recapYearInput = document.getElementById('recapYear');
             if (recapYearInput && !recapYearInput.value) {
                 recapYearInput.value = today.getFullYear();
@@ -744,11 +780,14 @@
 
                 // Set default date picker to today
                 const tDateInput = document.getElementById('tDate');
-                if (tDateInput) {
+                const dCreatedDateInput = document.getElementById('dCreatedDate');
+                if (tDateInput || dCreatedDateInput) {
                     const yyyy = today.getFullYear();
                     const mm = String(today.getMonth() + 1).padStart(2, '0');
                     const dd = String(today.getDate()).padStart(2, '0');
-                    tDateInput.value = `${yyyy}-${mm}-${dd}`;
+                    const dateStr = `${yyyy}-${mm}-${dd}`;
+                    if (tDateInput) tDateInput.value = dateStr;
+                    if (dCreatedDateInput) dCreatedDateInput.value = dateStr;
                 }
 
                 debts.forEach(d => {
@@ -790,7 +829,7 @@
             let totalIncome = 0;
             let totalExpense = 0;
 
-            transaksi.forEach(t => {
+            currentMonthTransaksi.forEach(t => {
                 if (t.jenis === 'income') totalIncome += t.jumlah;
                 else totalExpense += t.jumlah;
             });
@@ -1054,6 +1093,7 @@
                 keterangan: fd.get('dNote'),
                 jenis: fd.get('dType'), // 'Hutang' or 'Piutang'
                 jumlah: parseFloat(fd.get('dAmount')),
+                tanggal_catat: fd.get('dCreatedDate'),
                 tanggal_tenggat: fd.get('dDueDate'),
                 status: 'Belum Lunas'
             };
@@ -1196,6 +1236,12 @@
                 const dateObj = new Date(d.tanggal_tenggat);
                 const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
+                let formattedCreated = '-';
+                if (d.tanggal_catat) {
+                    const createdObj = new Date(d.tanggal_catat);
+                    formattedCreated = createdObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                }
+
                 // Cek apakah sudah lewat jatuh tempo hari ini (tanpa melihat jam)
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -1235,7 +1281,8 @@
                             </div>
                             <div class="text-right shrink-0 ml-2">
                                 <span class="block font-bold text-lg ${isLunas ? 'text-slate-400 line-through' : (isHutang ? 'text-rose-700' : 'text-emerald-700')}">${formatIDR(d.jumlah)}</span>
-                                <span class="text-[10px] font-medium ${isOverdue ? 'text-rose-600 font-bold' : 'text-slate-500'}">Tempo: ${formattedDate}</span>
+                                <span class="text-[10px] font-medium text-slate-500 block text-right mt-0.5">Dicatat: ${formattedCreated}</span>
+                                <span class="text-[10px] font-medium ${isOverdue ? 'text-rose-600 font-bold' : 'text-slate-500'} block text-right">Tempo: ${formattedDate}</span>
                             </div>
                         </div>
                         
@@ -1284,6 +1331,7 @@
                 'Keterangan': d.keterangan || '-',
                 'Jenis': d.jenis,
                 'Nominal (Rp)': d.jumlah,
+                'Tanggal Dicatat': d.tanggal_catat ? new Date(d.tanggal_catat).toLocaleDateString('id-ID') : '-',
                 'Jatuh Tempo': new Date(d.tanggal_tenggat).toLocaleDateString('id-ID'),
                 'Status': d.status
             }));
@@ -1323,6 +1371,7 @@
                     d.keterangan || '-',
                     d.jenis,
                     formatIDR(d.jumlah),
+                    d.tanggal_catat ? new Date(d.tanggal_catat).toLocaleDateString('id-ID') : '-',
                     new Date(d.tanggal_tenggat).toLocaleDateString('id-ID'),
                     d.status
                 ];
@@ -1330,7 +1379,7 @@
 
             doc.autoTable({
                 startY: 38,
-                head: [['No', 'Nama', 'Keterangan', 'Tipe', 'Nominal', 'Jatuh Tempo', 'Status']],
+                head: [['No', 'Nama', 'Ket', 'Tipe', 'Nominal', 'Tgl Dicatat', 'Jatuh Tempo', 'Status']],
                 body: tableBody,
                 theme: 'striped',
                 headStyles: { fillColor: [30, 64, 175] }, // Navy 800
@@ -1351,7 +1400,7 @@
                 'Pengeluaran': 'expense'
             };
 
-            const filtered = transaksi.filter(t => {
+            const filtered = currentMonthTransaksi.filter(t => {
                 const matchSearch = t.deskripsi.toLowerCase().includes(searchTerm);
                 const matchType = filterTerm === 'Semua' || t.jenis === filterMap[filterTerm];
                 return matchSearch && matchType;
@@ -1486,7 +1535,7 @@
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const emptyState = document.getElementById('emptyChartMessage');
 
-            const expenses = transaksi.filter(t => t.jenis === 'expense');
+            const expenses = currentMonthTransaksi.filter(t => t.jenis === 'expense');
 
             if (expenses.length === 0) {
                 if (expenseChartInstance) { expenseChartInstance.destroy(); expenseChartInstance = null; }
@@ -1554,7 +1603,7 @@
             }
 
             // Hitung total pengeluaran per kategori
-            const expenses = transaksi.filter(t => t.jenis === 'expense');
+            const expenses = currentMonthTransaksi.filter(t => t.jenis === 'expense');
             const categoryExpenses = expenses.reduce((acc, curr) => {
                 acc[curr.kategori] = (acc[curr.kategori] || 0) + curr.jumlah;
                 return acc;
@@ -1588,7 +1637,7 @@
 
         // Export Excel (Dashboard)
         function exportExcel() {
-            if (transaksi.length === 0) {
+            if (currentMonthTransaksi.length === 0) {
                 alert("Tidak ada transaksi untuk di-export!");
                 return;
             }
@@ -1603,7 +1652,7 @@
                 'Pengeluaran': 'expense'
             };
 
-            const filtered = transaksi.filter(t => {
+            const filtered = currentMonthTransaksi.filter(t => {
                 const matchSearch = t.deskripsi.toLowerCase().includes(searchTerm);
                 const matchType = filterTerm === 'Semua' || t.jenis === filterMap[filterTerm];
                 return matchSearch && matchType;
@@ -1630,7 +1679,7 @@
 
         // Export PDF Function using jsPDF
         function exportPDF() {
-            if (transaksi.length === 0) {
+            if (currentMonthTransaksi.length === 0) {
                 alert("Tidak ada transaksi untuk di-export!");
                 return;
             }
@@ -1640,7 +1689,7 @@
             const filterTerm = filterType.value;
             const filterMap = { 'Semua': 'Semua', 'Pemasukan': 'income', 'Pengeluaran': 'expense' };
 
-            const filtered = transaksi.filter(t => {
+            const filtered = currentMonthTransaksi.filter(t => {
                 const matchSearch = t.deskripsi.toLowerCase().includes(searchTerm);
                 const matchType = filterTerm === 'Semua' || t.jenis === filterMap[filterTerm];
                 return matchSearch && matchType;
@@ -1709,10 +1758,106 @@
             doc.save(`Laporan_KeuanganKu_${new Date().getTime()}.pdf`);
         }
 
+        function exportRecapExcel() {
+            const rMonth = parseInt(document.getElementById('recapMonth').value);
+            const rYear = parseInt(document.getElementById('recapYear').value);
+
+            const recapFiltered = transaksi.filter(t => {
+                const d = new Date(t.tanggal);
+                return d.getMonth() === rMonth && d.getFullYear() === rYear;
+            });
+
+            if (recapFiltered.length === 0) {
+                alert("Tidak ada transaksi untuk di-export pada bulan ini!");
+                return;
+            }
+
+            const exportData = recapFiltered.map(t => ({
+                'Tanggal': new Date(t.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                'Nama Transaksi': t.deskripsi,
+                'Kategori': t.kategori,
+                'Tipe': t.jenis === 'income' ? 'Pemasukan' : 'Pengeluaran',
+                'Nominal (Rp)': t.jumlah
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rekapan Bulanan");
+            XLSX.writeFile(workbook, `Rekapan_KeuanganKu_${rYear}_${rMonth + 1}.xlsx`);
+        }
+
+        function exportRecapPDF() {
+            const rMonth = parseInt(document.getElementById('recapMonth').value);
+            const rYear = parseInt(document.getElementById('recapYear').value);
+
+            const recapFiltered = transaksi.filter(t => {
+                const d = new Date(t.tanggal);
+                return d.getMonth() === rMonth && d.getFullYear() === rYear;
+            });
+
+            if (recapFiltered.length === 0) {
+                alert("Tidak ada transaksi untuk di-export pada bulan ini!");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            
+            doc.setFontSize(18);
+            doc.text("Laporan Rekapan Bulanan", 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Periode: ${months[rMonth]} ${rYear}`, 14, 30);
+
+            let inc = 0, exp = 0;
+            recapFiltered.forEach(t => { if (t.jenis === 'income') inc += t.jumlah; else exp += t.jumlah; });
+            const bal = inc - exp;
+
+            doc.autoTable({
+                startY: 35,
+                head: [['Ringkasan', 'Nominal']],
+                body: [
+                    ['Total Pemasukan', formatIDR(inc)],
+                    ['Total Pengeluaran', formatIDR(exp)],
+                    ['Sisa Saldo Bersih', formatIDR(bal)]
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [30, 64, 175] }
+            });
+
+            doc.text("Rincian Transaksi:", 14, doc.lastAutoTable.finalY + 15);
+
+            const tableBody = recapFiltered.map((t, index) => {
+                const dateObj = new Date(t.tanggal);
+                const types = t.jenis === 'income' ? 'Pemasukan' : 'Pengeluaran';
+                return [
+                    index + 1,
+                    dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    t.deskripsi,
+                    t.kategori,
+                    types,
+                    formatIDR(t.jumlah)
+                ];
+            });
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['No', 'Tanggal', 'Nama Transaksi', 'Kategori', 'Tipe', 'Nominal']],
+                body: tableBody,
+                theme: 'striped',
+                headStyles: { fillColor: [16, 185, 129] },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            doc.save(`Rekapan_KeuanganKu_${rYear}_${rMonth + 1}.pdf`);
+        }
+
         // Render Health Score
         function renderHealthScore() {
             let inc = 0, exp = 0;
-            transaksi.forEach(t => { if (t.jenis === 'income') inc += t.jumlah; else exp += t.jumlah; });
+            currentMonthTransaksi.forEach(t => { if (t.jenis === 'income') inc += t.jumlah; else exp += t.jumlah; });
 
             let score = 0;
             if (inc === 0) {
